@@ -35,7 +35,7 @@ class ConfigAnalytics extends LitElement {
       <ha-card
         outlined
         .header=${this.hass.localize("ui.panel.config.analytics.header") ||
-        "Home Assistant analytics"}
+        "Power Pilot analytics"}
       >
         <div class="card-content">
           ${error ? html`<div class="error">${error}</div>` : nothing}

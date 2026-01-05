@@ -1,11 +1,11 @@
 <meta property="fb:app_id" content="338291289691179" />
-<meta property="og:title" content="Home Assistant Cast" />
-<meta property="og:site_name" content="Home Assistant Cast" />
+<meta property="og:title" content="Power Pilot Cast" />
+<meta property="og:site_name" content="Power Pilot Cast" />
 <meta property="og:url" content="https://cast.home-assistant.io/" />
 <meta property="og:type" content="website" />
 <meta
   property="og:description"
-  content="Show Home Assistant on your Chromecast or Google Assistant devices with a screen."
+  content="Show Power Pilot on your Chromecast or Google Assistant devices with a screen."
 />
 <meta
   property="og:image"

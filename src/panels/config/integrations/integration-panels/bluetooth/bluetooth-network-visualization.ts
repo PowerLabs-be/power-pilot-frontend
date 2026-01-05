@@ -33,7 +33,7 @@ import { bluetoothAdvertisementMonitorTabs } from "./bluetooth-advertisement-mon
 const UPDATE_THROTTLE_TIME = 10000;
 
 const CORE_SOURCE_ID = "ha";
-const CORE_SOURCE_LABEL = "Home Assistant";
+const CORE_SOURCE_LABEL = "Power Pilot";
 
 const RSSI_COLOR_THRESHOLDS: [number, string][] = [
   [-70, "--green-color"], // Excellent: > -70 dBm

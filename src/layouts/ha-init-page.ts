@@ -19,7 +19,7 @@ class HaInitPage extends LitElement {
   protected render() {
     return this.error
       ? html`
-          <p>Unable to connect to Home Assistant.</p>
+          <p>Unable to connect to Power Pilot.</p>
           <p class="retry-text">
             Retrying in ${this._retryInSeconds} seconds...
           </p>
@@ -46,7 +46,7 @@ class HaInitPage extends LitElement {
           <div id="loading-text">
             ${this.migration
               ? html`
-                  Database upgrade is in progress, Home Assistant will not start
+                  Database upgrade is in progress, Power Pilot will not start
                   until the upgrade is completed.
                   <br /><br />
                   The upgrade may need a long time to complete, please be

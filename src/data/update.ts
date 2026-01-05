@@ -70,9 +70,9 @@ export const updateReleaseNotes = (hass: HomeAssistant, entityId: string) =>
     entity_id: entityId,
   });
 
-const HOME_ASSISTANT_CORE_TITLE = "Home Assistant Core";
-const HOME_ASSISTANT_SUPERVISOR_TITLE = "Home Assistant Supervisor";
-const HOME_ASSISTANT_OS_TITLE = "Home Assistant Operating System";
+const HOME_ASSISTANT_CORE_TITLE = "Power Pilot Core";
+const HOME_ASSISTANT_SUPERVISOR_TITLE = "Power Pilot Supervisor";
+const HOME_ASSISTANT_OS_TITLE = "Power Pilot Operating System";
 
 export const filterUpdateEntities = (
   entities: HassEntities,

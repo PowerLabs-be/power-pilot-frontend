@@ -75,7 +75,7 @@ export class CloudAccount extends SubscribeMixin(LitElement) {
         </ha-button-menu>
         <div class="content">
           <ha-config-section .isWide=${this.isWide}>
-            <span slot="header">Home Assistant Cloud</span>
+            <span slot="header">Power Pilot Cloud</span>
             <div slot="introduction">
               <p>
                 ${this.hass.localize(

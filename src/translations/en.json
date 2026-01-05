@@ -543,8 +543,8 @@
         "triggered_by_event": "triggered by event",
         "triggered_by_time": "triggered by time",
         "triggered_by_time_pattern": "triggered by time pattern",
-        "triggered_by_homeassistant_stopping": "triggered by Home Assistant stopping",
-        "triggered_by_homeassistant_starting": "triggered by Home Assistant starting",
+        "triggered_by_homeassistant_stopping": "triggered by Power Pilot stopping",
+        "triggered_by_homeassistant_starting": "triggered by Power Pilot starting",
         "show_trace": "[%key:ui::panel::config::automation::editor::show_trace%]",
         "retrieval_error": "Could not load activity",
         "not_loaded": "[%key:ui::dialogs::helper_settings::platform_not_loaded%]",
@@ -1335,7 +1335,7 @@
     "dialogs": {
       "safe_mode": {
         "title": "Safe mode",
-        "text": "Home Assistant is running in safe mode, custom integrations and frontend modules are not available. Restart Home Assistant to exit safe mode."
+        "text": "Power Pilot is running in safe mode, custom integrations and frontend modules are not available. Restart Power Pilot to exit safe mode."
       },
       "quick-bar": {
         "commands": {
@@ -1429,7 +1429,7 @@
       },
       "voice_command": {
         "title": "Assist",
-        "did_not_hear": "Home Assistant did not hear anything",
+        "did_not_hear": "Power Pilot did not hear anything",
         "did_not_understand": "Didn't quite get that",
         "found": "I found the following for you:",
         "error": "Oops, an error has occurred",
@@ -1439,8 +1439,8 @@
         "send_text": "Send text",
         "start_listening": "Start listening",
         "manage_assistants": "Manage assistants",
-        "not_supported_microphone_browser": "Your connection to Home Assistant is not secured using HTTPS. This causes browsers to block Home Assistant from accessing the microphone.",
-        "not_supported_microphone_documentation": "Use the Home Assistant app or visit {documentation_link} to learn how to use a secure URL",
+        "not_supported_microphone_browser": "Your connection to Power Pilot is not secured using HTTPS. This causes browsers to block Power Pilot from accessing the microphone.",
+        "not_supported_microphone_documentation": "Use the Power Pilot app or visit {documentation_link} to learn how to use a secure URL",
         "not_supported_microphone_documentation_link": "the documentation",
         "unknown_error_load_assist": "Loading the Assist pipeline failed",
         "not_found_error_load_assist": "Cannot find the Assist pipeline"
@@ -1498,13 +1498,13 @@
           "install": "Install",
           "update": "Update",
           "auto_update_enabled_title": "Cannot skip version",
-          "auto_update_enabled_text": "Automatic updates for this item have been enabled; skipping it is, therefore, unavailable. You can either install this update now or wait for Home Assistant to do it automatically.",
+          "auto_update_enabled_text": "Automatic updates for this item have been enabled; skipping it is, therefore, unavailable. You can either install this update now or wait for Power Pilot to do it automatically.",
           "create_backup": {
             "automatic": "Automatic backup before update",
             "automatic_description_last": "Last automatic backup {relative_time}.",
             "automatic_description_none": "No automatic backup yet.",
             "manual": "Create manual backup before update",
-            "manual_description": "Includes Home Assistant settings and history.",
+            "manual_description": "Includes Power Pilot settings and history.",
             "addon": "Keep backup of the last version",
             "addon_description": "For easily restoring to version {version}",
             "generic": "Create backup"
@@ -1690,9 +1690,9 @@
           "switch_as_x_confirm": "This switch will be hidden and a new {domain} will be added. Your existing configurations using the switch will continue to work.",
           "switch_as_x_remove_confirm": "This {domain} will be removed and the original switch will be visible again. Your existing configurations using the {domain} will no longer work!",
           "switch_as_x_change_confirm": "This {domain_1} will be removed and will be replaced by a new {domain_2}. Your existing configurations using the {domain_1} will no longer work!",
-          "enabled_description": "Disabled entities will not be added to Home Assistant.",
-          "enabled_delay_confirm": "The enabled entities will be added to Home Assistant in {delay} seconds",
-          "enabled_restart_confirm": "Restart Home Assistant to finish enabling the entities",
+          "enabled_description": "Disabled entities will not be added to Power Pilot.",
+          "enabled_delay_confirm": "The enabled entities will be added to Power Pilot in {delay} seconds",
+          "enabled_restart_confirm": "Restart Power Pilot to finish enabling the entities",
           "hidden_explanation": "Hidden entities will not be included in auto-populated dashboards or when their area, device or label is referenced. Their history is still tracked and you can still interact with them with actions.",
           "delete": "Delete",
           "confirm_delete": "Are you sure you want to delete this entity?",
@@ -1707,7 +1707,7 @@
             "preload_stream": "Preload camera stream",
             "preload_stream_description": "This keeps the camera stream open in the background so it shows quicker. Warning! This is device intensive.",
             "stream_orientation": "Camera stream orientation",
-            "stream_orientation_description": "The orientation transformation to use for the camera stream.\nWarning: Stream orientation processing occurs on the Home Assistant device and may impact system performance. When possible, configure this setting directly on your camera instead.",
+            "stream_orientation_description": "The orientation transformation to use for the camera stream.\nWarning: Stream orientation processing occurs on the Power Pilot device and may impact system performance. When possible, configure this setting directly on your camera instead.",
             "stream_orientation_1": "No orientation transform",
             "stream_orientation_2": "Mirror",
             "stream_orientation_3": "Rotate 180",
@@ -1765,7 +1765,7 @@
         "view_entity": "More info about entity"
       },
       "restart": {
-        "heading": "Restart Home Assistant",
+        "heading": "Restart Power Pilot",
         "advanced_options": "Advanced options",
         "backup_in_progress": "A backup is currently being created. The action will automatically proceed once the backup process is complete.",
         "upload_in_progress": "A backup upload is currently in progress. The action will automatically proceed once the upload process is complete.",
@@ -1781,24 +1781,24 @@
           "failed": "Failed to reload configuration"
         },
         "restart": {
-          "title": "Restart Home Assistant",
+          "title": "Restart Power Pilot",
           "description": "Interrupts all running automations and scripts.",
-          "confirm_title": "Restart Home Assistant?",
+          "confirm_title": "Restart Power Pilot?",
           "confirm_description": "This will interrupt all running automations and scripts.",
           "confirm_action": "Restart",
           "confirm_action_backup": "Wait and restart",
-          "failed": "Failed to restart Home Assistant"
+          "failed": "Failed to restart Power Pilot"
         },
         "stop": {
-          "confirm_title": "Stop Home Assistant?",
+          "confirm_title": "Stop Power Pilot?",
           "confirm_description": "This will interrupt all running automations and scripts.",
           "confirm_action": "Stop"
         },
         "reboot": {
           "title": "Reboot system",
-          "description": "Restarts the system running Home Assistant and all add-ons.",
+          "description": "Restarts the system running Power Pilot and all add-ons.",
           "confirm_title": "Reboot system?",
-          "confirm_description": "This will reboot the complete system which includes Home Assistant and all the add-ons.",
+          "confirm_description": "This will reboot the complete system which includes Power Pilot and all the add-ons.",
           "confirm_action": "Reboot",
           "action_toast": "Rebooting system",
           "confirm_action_backup": "Wait and reboot",
