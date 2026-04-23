@@ -31,7 +31,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Verify version
-        uses: home-assistant/actions/helpers/verify-version@master
+        uses: PowerLabs-be/power-pilot-actions/helpers/verify-version@master
 
       - name: Setup Node
         uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
@@ -71,7 +71,7 @@ jobs:
           # Sleep to give pypi time to populate the new version across mirrors
           sleep 240
           version=$(echo "${{ github.ref }}" | awk -F"/" '{print $NF}' )
-          echo "home-assistant-frontend==$version" > ./requirements.txt
+          echo "power-pilot-frontend==$version" > ./requirements.txt
 
       # home-assistant/wheels doesn't support SHA pinning
       - name: Build wheels
@@ -106,11 +106,11 @@ jobs:
       - name: Build landing-page
         run: landing-page/script/build_landing_page
       - name: Tar folder
-        run: tar -czf landing-page/home_assistant_frontend_landingpage-${{ github.event.release.tag_name }}.tar.gz -C landing-page/dist .
+        run: tar -czf landing-page/power_pilot_frontend_landingpage-${{ github.event.release.tag_name }}.tar.gz -C landing-page/dist .
       - name: Upload release asset
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
-          files: landing-page/home_assistant_frontend_landingpage-${{ github.event.release.tag_name }}.tar.gz
+          files: landing-page/power_pilot_frontend_landingpage-${{ github.event.release.tag_name }}.tar.gz
 
   release-supervisor:
     name: Release supervisor frontend
@@ -135,8 +135,8 @@ jobs:
       - name: Build supervisor
         run: hassio/script/build_hassio
       - name: Tar folder
-        run: tar -czf hassio/home_assistant_frontend_supervisor-${{ github.event.release.tag_name }}.tar.gz -C hassio/build .
+        run: tar -czf hassio/power_pilot_frontend_supervisor-${{ github.event.release.tag_name }}.tar.gz -C hassio/build .
       - name: Upload release asset
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
-          files: hassio/home_assistant_frontend_supervisor-${{ github.event.release.tag_name }}.tar.gz
+          files: hassio/power_pilot_frontend_supervisor-${{ github.event.release.tag_name }}.tar.gz
