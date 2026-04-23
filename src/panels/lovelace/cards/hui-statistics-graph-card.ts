@@ -8,7 +8,11 @@ import { createSearchParam } from "../../../common/url/search-params";
 import "../../../components/ha-card";
 import "../../../components/ha-icon-next";
 import "../../../components/ha-tooltip";
-import { getEnergyDataCollection } from "../../../data/energy";
+import {
+  getEnergyDataCollection,
+  getSuggestedPeriod,
+  validateEnergyCollectionKey,
+} from "../../../data/energy";
 import type {
   Statistics,
   StatisticsMetaData,
@@ -20,16 +24,12 @@ import {
   getStatisticMetadata,
 } from "../../../data/recorder";
 import type { HomeAssistant } from "../../../types";
-import { computeLovelaceEntityName } from "../common/entity/compute-lovelace-entity-name";
 import { findEntities } from "../common/find-entities";
 import { hasConfigOrEntitiesChanged } from "../common/has-changed";
 import { processConfigEntities } from "../common/process-config-entities";
 import type { EntityConfig } from "../entity-rows/types";
 import type { LovelaceCard, LovelaceGridOptions } from "../types";
-import {
-  getSuggestedMax,
-  getSuggestedPeriod,
-} from "./energy/common/energy-chart-options";
+import { getSuggestedMax } from "./energy/common/energy-chart-options";
 import type { StatisticsGraphCardConfig } from "./types";
 
 export const DEFAULT_DAYS_TO_SHOW = 30;
@@ -105,14 +105,17 @@ export class HuiStatisticsGraphCard extends LitElement implements LovelaceCard {
       return;
     }
     if (this._config?.energy_date_selection) {
-      this._subscribeEnergy();
+      this._subscribeEnergy(true);
     } else if (this._interval === undefined) {
       this._setFetchStatisticsTimer(true);
     }
   }
 
-  private _subscribeEnergy() {
+  private _subscribeEnergy(performFetch = false) {
     if (!this._energySub) {
+      if (performFetch) {
+        this._fetchInitialStatistics();
+      }
       this._energySub = getEnergyDataCollection(this.hass!, {
         key: this._config?.collection_key,
       }).subscribe((data) => {
@@ -157,6 +160,10 @@ export class HuiStatisticsGraphCard extends LitElement implements LovelaceCard {
       throw new Error("You must include at least one entity");
     }
 
+    if (config.energy_date_selection && config.collection_key) {
+      validateEnergyCollectionKey(config.collection_key);
+    }
+
     this._entities = config.entities
       ? processConfigEntities(config.entities, false)
       : [];
@@ -180,13 +187,19 @@ export class HuiStatisticsGraphCard extends LitElement implements LovelaceCard {
     this._names = {};
     this._entities.forEach((config) => {
       const stateObj = this.hass!.states[config.entity];
-      this._names[config.entity] =
-        computeLovelaceEntityName(this.hass!, stateObj, config.name) ||
-        config.entity;
+      if (stateObj) {
+        this._names[config.entity] =
+          this.hass!.formatEntityName(stateObj, config.name) || config.entity;
+      } else {
+        this._names[config.entity] =
+          (typeof config.name === "string" ? config.name : undefined) ||
+          this._metadata?.[config.entity]?.name ||
+          config.entity;
+      }
     });
   }
 
-  protected shouldUpdate(changedProps: PropertyValues): boolean {
+  protected shouldUpdate(changedProps: PropertyValues<this>): boolean {
     return (
       hasConfigOrEntitiesChanged(this, changedProps) ||
       changedProps.size > 1 ||
@@ -210,7 +223,7 @@ export class HuiStatisticsGraphCard extends LitElement implements LovelaceCard {
 
     if (this.hass) {
       if (this._config.energy_date_selection && !this._energySub) {
-        this._subscribeEnergy();
+        this._subscribeEnergy(true);
         return;
       }
       if (!this._config.energy_date_selection && this._energySub) {
@@ -233,7 +246,11 @@ export class HuiStatisticsGraphCard extends LitElement implements LovelaceCard {
       changedProps.has("_config") &&
       oldConfig?.entities !== this._config.entities
     ) {
-      this._setFetchStatisticsTimer(true);
+      if (this._config.energy_date_selection) {
+        this._fetchInitialStatistics();
+      } else {
+        this._setFetchStatisticsTimer(true);
+      }
       return;
     }
 
@@ -246,6 +263,11 @@ export class HuiStatisticsGraphCard extends LitElement implements LovelaceCard {
     ) {
       this._setFetchStatisticsTimer();
     }
+  }
+
+  private async _fetchInitialStatistics() {
+    await this._getStatisticsMetaData(this._entityIds);
+    await this._getStatistics();
   }
 
   private async _setFetchStatisticsTimer(fetchMetadata = false) {
@@ -265,14 +287,13 @@ export class HuiStatisticsGraphCard extends LitElement implements LovelaceCard {
   }
 
   private get _period() {
-    return (
-      this._config?.period ??
-      (this._energyStart && this._energyEnd
-        ? getSuggestedPeriod(
-            differenceInDays(this._energyEnd, this._energyStart)
-          )
-        : undefined)
-    );
+    const period = this._config?.period;
+    const autoMode = period === "auto";
+    return this._energyStart && this._energyEnd && (!period || autoMode)
+      ? getSuggestedPeriod(this._energyStart, this._energyEnd)
+      : autoMode
+        ? undefined
+        : period;
   }
 
   protected render() {
@@ -334,7 +355,11 @@ export class HuiStatisticsGraphCard extends LitElement implements LovelaceCard {
             .maxYAxis=${this._config.max_y_axis}
             .startTime=${this._energyStart}
             .endTime=${this._energyEnd && this._energyStart
-              ? getSuggestedMax(this._period!, this._energyEnd)
+              ? getSuggestedMax(
+                  this._period!,
+                  this._energyEnd,
+                  (this._config.chart_type ?? "line").startsWith("line")
+                )
               : undefined}
             .fitYData=${this._config.fit_y_data || false}
             .hideLegend=${this._config.hide_legend || false}
@@ -428,7 +453,7 @@ export class HuiStatisticsGraphCard extends LitElement implements LovelaceCard {
       padding-bottom: 0;
     }
     .card-header ha-icon-next {
-      --mdc-icon-button-size: 24px;
+      --ha-icon-button-size: 24px;
       line-height: 24px;
       color: var(--primary-text-color);
     }

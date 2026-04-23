@@ -7,7 +7,10 @@ import type { EntityNameItem } from "../common/entity/compute_entity_name_displa
 import { computeStateDomain } from "../common/entity/compute_state_domain";
 import { supportsFeature } from "../common/entity/supports-feature";
 import { isHelperDomain } from "../panels/config/helpers/const";
-import type { UiAction } from "../panels/lovelace/components/hui-action-editor";
+import type {
+  ActionRelatedContext,
+  UiAction,
+} from "../panels/lovelace/components/hui-action-editor";
 import type { HomeAssistant } from "../types";
 import {
   type DeviceRegistryEntry,
@@ -19,9 +22,12 @@ import type {
 } from "./entity/entity_registry";
 import type { EntitySources } from "./entity/entity_sources";
 
+export type ThresholdMode = "crossed" | "changed" | "is";
+
 export type Selector =
   | ActionSelector
   | AddonSelector
+  | AppSelector
   | AreaSelector
   | AreasDisplaySelector
   | AttributeSelector
@@ -52,7 +58,9 @@ export type Selector =
   | MediaSelector
   | NavigationSelector
   | NumberSelector
+  | NumericThresholdSelector
   | ObjectSelector
+  | PeriodSelector
   | AssistPipelineSelector
   | QRCodeSelector
   | SelectSelector
@@ -65,9 +73,11 @@ export type Selector =
   | TemplateSelector
   | ThemeSelector
   | TimeSelector
+  | TimezoneSelector
   | TriggerSelector
   | TTSSelector
   | TTSVoiceSelector
+  | SerialPortSelector
   | UiActionSelector
   | UiColorSelector
   | UiStateContentSelector
@@ -80,7 +90,11 @@ export interface ActionSelector {
 }
 
 export interface AddonSelector {
-  addon: {
+  addon: AppSelector["app"];
+}
+
+export interface AppSelector {
+  app: {
     name?: string;
     slug?: string;
   } | null;
@@ -91,6 +105,7 @@ export interface AreaSelector {
     entity?: EntitySelectorFilter | readonly EntitySelectorFilter[];
     device?: DeviceSelectorFilter | readonly DeviceSelectorFilter[];
     multiple?: boolean;
+    reorder?: boolean;
   } | null;
 }
 
@@ -221,6 +236,8 @@ export interface DurationSelector {
   duration: {
     enable_day?: boolean;
     enable_millisecond?: boolean;
+    allow_negative?: boolean;
+    enable_second?: boolean;
   } | null;
 }
 
@@ -229,6 +246,7 @@ interface EntitySelectorFilter {
   domain?: string | readonly string[];
   device_class?: string | readonly string[];
   supported_features?: number | [number];
+  unit_of_measurement?: string | readonly string[];
 }
 
 export interface EntitySelector {
@@ -292,6 +310,10 @@ export interface LanguageSelector {
   } | null;
 }
 
+export interface TimezoneSelector {
+  timezone: {} | null;
+}
+
 export interface LocationSelector {
   location: {
     radius?: boolean;
@@ -331,7 +353,7 @@ export interface MediaSelectorValue {
 }
 
 export interface NavigationSelector {
-  navigation: {} | null;
+  navigation: ActionRelatedContext | null;
 }
 
 export interface NumberSelector {
@@ -343,6 +365,15 @@ export interface NumberSelector {
     unit_of_measurement?: string;
     slider_ticks?: boolean;
     translation_key?: string;
+  } | null;
+}
+
+export interface NumericThresholdSelector {
+  numeric_threshold: {
+    mode?: ThresholdMode;
+    unit_of_measurement?: readonly string[];
+    number?: NumberSelector["number"];
+    entity?: EntitySelectorFilter | readonly EntitySelectorFilter[];
   } | null;
 }
 
@@ -363,6 +394,27 @@ export interface ObjectSelector {
   } | null;
 }
 
+export type PeriodKey =
+  | "today"
+  | "yesterday"
+  | "tomorrow"
+  | "this_week"
+  | "last_week"
+  | "next_week"
+  | "this_month"
+  | "last_month"
+  | "next_month"
+  | "this_year"
+  | "last_year"
+  | "next_7d"
+  | "next_30d"
+  | "none";
+export interface PeriodSelector {
+  period: {
+    options: readonly PeriodKey[];
+  } | null;
+}
+
 export interface AssistPipelineSelector {
   assist_pipeline: {
     include_last_used?: boolean;
@@ -376,7 +428,7 @@ interface SelectBoxOptionImage {
 }
 
 export interface SelectOption {
-  value: any;
+  value: string;
   label: string;
   description?: string;
   image?: string | SelectBoxOptionImage;
@@ -400,6 +452,10 @@ export interface SelectorSelector {
   selector: {} | null;
 }
 
+export interface SerialPortSelector {
+  serial_port: {} | null;
+}
+
 export interface StateSelector {
   state: {
     extra_options?: { label: string; value: any }[];
@@ -407,6 +463,7 @@ export interface StateSelector {
     attribute?: string;
     hide_states?: string[];
     multiple?: boolean;
+    no_entity?: boolean;
   } | null;
 }
 
@@ -442,6 +499,7 @@ export interface StringSelector {
       | "color";
     prefix?: string;
     suffix?: string;
+    placeholder?: string;
     autocomplete?: string;
     multiple?: true;
   } | null;
@@ -459,7 +517,9 @@ export interface TargetSelector {
 }
 
 export interface TemplateSelector {
-  template: {} | null;
+  template: {
+    preview?: boolean;
+  } | null;
 }
 
 export interface ThemeSelector {
@@ -488,11 +548,19 @@ export interface UiActionSelector {
   } | null;
 }
 
+export interface UiColorExtraOption {
+  value: string;
+  label: string;
+  icon?: string;
+  display_color?: string;
+}
+
 export interface UiColorSelector {
   ui_color: {
     default_color?: string;
     include_none?: boolean;
     include_state?: boolean;
+    extra_options?: UiColorExtraOption[];
   } | null;
 }
 
@@ -500,6 +568,7 @@ export interface UiStateContentSelector {
   ui_state_content: {
     entity_id?: string;
     allow_name?: boolean;
+    allow_context?: boolean;
   } | null;
 }
 
@@ -792,6 +861,7 @@ export const filterSelectorEntities = (
     domain: filterDomain,
     device_class: filterDeviceClass,
     supported_features: filterSupportedFeature,
+    unit_of_measurement: filterUnitOfMeasurement,
     integration: filterIntegration,
   } = filterEntity;
 
@@ -822,6 +892,18 @@ export const filterSelectorEntities = (
       !ensureArray(filterSupportedFeature).some((feature) =>
         supportsFeature(entity, feature)
       )
+    ) {
+      return false;
+    }
+  }
+
+  if (filterUnitOfMeasurement) {
+    const entityUnitOfMeasurement = entity.attributes.unit_of_measurement;
+    if (
+      !entityUnitOfMeasurement ||
+      (Array.isArray(filterUnitOfMeasurement)
+        ? !filterUnitOfMeasurement.includes(entityUnitOfMeasurement)
+        : entityUnitOfMeasurement !== filterUnitOfMeasurement)
     ) {
       return false;
     }
@@ -929,13 +1011,13 @@ export const resolveEntityIDs = (
   targetPickerValue: HassServiceTarget,
   entities: HomeAssistant["entities"],
   devices: HomeAssistant["devices"],
-  areas: HomeAssistant["areas"]
+  areas: HomeAssistant["areas"],
+  targetSelector: TargetSelector = { target: {} }
 ): string[] => {
   if (!targetPickerValue) {
     return [];
   }
 
-  const targetSelector = { target: {} };
   const targetEntities = new Set(ensureArray(targetPickerValue.entity_id));
   const targetDevices = new Set(ensureArray(targetPickerValue.device_id));
   const targetAreas = new Set(ensureArray(targetPickerValue.area_id));

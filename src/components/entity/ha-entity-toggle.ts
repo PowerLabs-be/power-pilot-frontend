@@ -80,12 +80,12 @@ export class HaEntityToggle extends LitElement {
     `;
   }
 
-  protected firstUpdated(changedProps) {
+  protected firstUpdated(changedProps: PropertyValues<this>) {
     super.firstUpdated(changedProps);
     this.addEventListener("click", (ev) => ev.stopPropagation());
   }
 
-  public willUpdate(changedProps: PropertyValues): void {
+  public willUpdate(changedProps: PropertyValues<this>): void {
     super.willUpdate(changedProps);
     if (changedProps.has("stateObj")) {
       this._isOn = isOn(this.stateObj);
@@ -143,17 +143,19 @@ export class HaEntityToggle extends LitElement {
     // Optimistic update.
     this._isOn = turnOn;
 
-    await this.hass.callService(serviceDomain, service, {
-      entity_id: this.stateObj.entity_id,
-    });
-
-    setTimeout(async () => {
-      // If after 2 seconds we have not received a state update
-      // reset the switch to it's original state.
-      if (this.stateObj === currentState) {
-        this._isOn = isOn(this.stateObj);
-      }
-    }, 2000);
+    try {
+      await this.hass.callService(serviceDomain, service, {
+        entity_id: this.stateObj.entity_id,
+      });
+    } finally {
+      setTimeout(async () => {
+        // If after 2 seconds we have not received a state update
+        // reset the switch to it's original state.
+        if (this.stateObj === currentState) {
+          this._isOn = isOn(this.stateObj);
+        }
+      }, 2000);
+    }
   }
 
   static styles = css`
@@ -162,7 +164,7 @@ export class HaEntityToggle extends LitElement {
       min-width: 38px;
     }
     ha-icon-button {
-      --mdc-icon-button-size: 40px;
+      --ha-icon-button-size: 40px;
       color: var(--ha-icon-button-inactive-color, var(--primary-text-color));
       transition: color 0.5s;
     }

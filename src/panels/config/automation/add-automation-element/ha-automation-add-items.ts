@@ -1,5 +1,5 @@
 import { mdiInformationOutline, mdiPlus } from "@mdi/js";
-import { LitElement, css, html, nothing } from "lit";
+import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import {
   customElement,
   eventOptions,
@@ -20,6 +20,7 @@ import type { ConfigEntry } from "../../../../data/config_entries";
 import type { LabelRegistryEntry } from "../../../../data/label/label_registry";
 import type { HomeAssistant } from "../../../../types";
 import type { AddAutomationElementListItem } from "../add-automation-element-dialog";
+import { haStyleScrollbar } from "../../../../resources/styles";
 import { getTargetIcon } from "../target/get_target_icon";
 
 type Target = [string, string | undefined, string | undefined];
@@ -38,6 +39,8 @@ export class HaAutomationAddItems extends LitElement {
   @property({ attribute: "select-label" }) public selectLabel!: string;
 
   @property({ attribute: "empty-label" }) public emptyLabel!: string;
+
+  @property({ attribute: false }) public emptyNote?: string | TemplateResult;
 
   @property({ attribute: false }) public target?: Target;
 
@@ -67,6 +70,7 @@ export class HaAutomationAddItems extends LitElement {
         blank: this.error || !this.items || !this.items.length,
         error: this.error,
         scrolled: this._itemsScrolled,
+        "ha-scrollbar": this.scrollable,
       })}
       @scroll=${this._onItemsScroll}
     >
@@ -79,6 +83,9 @@ export class HaAutomationAddItems extends LitElement {
             ? html`${this.emptyLabel}
               ${this.target
                 ? html`<div>${this._renderTarget(this.target)}</div>`
+                : nothing}
+              ${this.emptyNote
+                ? html`<div class="empty-note">${this.emptyNote}</div>`
                 : nothing}`
             : repeat(
                 this.items,
@@ -196,121 +203,138 @@ export class HaAutomationAddItems extends LitElement {
     }
   }
 
-  static styles = css`
-    :host {
-      display: flex;
-    }
-    :host([scrollable]) .items {
-      overflow: auto;
-    }
-    .items {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-    }
-    .items.blank {
-      border-radius: var(--ha-border-radius-xl);
-      background-color: var(--ha-color-surface-default);
-      align-items: center;
-      color: var(--ha-color-text-secondary);
-      padding: 0;
-      margin: 0 var(--ha-space-4)
-        max(var(--safe-area-inset-bottom), var(--ha-space-3));
-      line-height: var(--ha-line-height-expanded);
-      justify-content: center;
-    }
+  static styles = [
+    haStyleScrollbar,
+    css`
+      :host {
+        display: flex;
+        flex-grow: 1;
+      }
+      :host([scrollable]) .items {
+        overflow: auto;
+      }
+      .items {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+      }
+      .items.blank {
+        border-radius: var(--ha-border-radius-xl);
+        background-color: var(--ha-color-surface-default);
+        align-items: center;
+        color: var(--ha-color-text-secondary);
+        padding: var(--ha-space-4);
+        margin: 0 var(--ha-space-4)
+          max(var(--safe-area-inset-bottom), var(--ha-space-3));
+        line-height: var(--ha-line-height-expanded);
+        justify-content: center;
+      }
 
-    .items.error {
-      background-color: var(--ha-color-fill-danger-quiet-resting);
-      color: var(--ha-color-on-danger-normal);
-    }
-    .items ha-md-list {
-      --md-list-item-two-line-container-height: var(--ha-space-12);
-      --md-list-item-leading-space: var(--ha-space-3);
-      --md-list-item-trailing-space: var(--md-list-item-leading-space);
-      --md-list-item-bottom-space: var(--ha-space-2);
-      --md-list-item-top-space: var(--md-list-item-bottom-space);
-      --md-list-item-supporting-text-font: var(--ha-font-family-body);
-      --ha-md-list-item-gap: var(--ha-space-3);
-      gap: var(--ha-space-2);
-      padding: 0 var(--ha-space-4);
-    }
-    .items ha-md-list ha-md-list-item {
-      border-radius: var(--ha-border-radius-lg);
-      border: 1px solid var(--ha-color-border-neutral-quiet);
-    }
+      .empty-note {
+        color: var(--ha-color-text-secondary);
+        margin-top: var(--ha-space-2);
+        text-align: center;
+      }
 
-    .items ha-md-list {
-      padding-bottom: max(var(--safe-area-inset-bottom), var(--ha-space-3));
-    }
+      .empty-note a {
+        color: currentColor;
+        text-decoration: underline;
+      }
 
-    .items .item-headline {
-      display: flex;
-      align-items: center;
-      gap: var(--ha-space-2);
-      min-height: var(--ha-space-9);
-      flex-wrap: wrap;
-    }
+      .items.error {
+        background-color: var(--ha-color-fill-danger-quiet-resting);
+        color: var(--ha-color-on-danger-normal);
+      }
+      .items ha-md-list {
+        --md-list-item-two-line-container-height: var(--ha-space-12);
+        --md-list-item-leading-space: var(--ha-space-3);
+        --md-list-item-trailing-space: var(--md-list-item-leading-space);
+        --md-list-item-bottom-space: var(--ha-space-2);
+        --md-list-item-top-space: var(--md-list-item-bottom-space);
+        --md-list-item-supporting-text-font: var(--ha-font-family-body);
+        --ha-md-list-item-gap: var(--ha-space-3);
+        gap: var(--ha-space-2);
+        padding: 0 var(--ha-space-4);
+      }
+      .items ha-md-list ha-md-list-item {
+        border-radius: var(--ha-border-radius-lg);
+        border: 1px solid var(--ha-color-border-neutral-quiet);
+      }
 
-    .items-title {
-      position: sticky;
-      display: flex;
-      align-items: center;
-      font-weight: var(--ha-font-weight-medium);
-      padding-top: var(--ha-space-2);
-      padding-bottom: var(--ha-space-2);
-      padding-inline-start: var(--ha-space-8);
-      padding-inline-end: var(--ha-space-3);
-      top: 0;
-      z-index: 1;
-      background-color: var(--card-background-color);
-    }
-    ha-bottom-sheet .items-title {
-      padding-top: var(--ha-space-3);
-    }
-    .scrolled .items-title:first-of-type {
-      box-shadow: var(--bar-box-shadow);
-      border-bottom: 1px solid var(--ha-color-border-neutral-quiet);
-    }
+      .items ha-md-list {
+        padding-bottom: max(var(--safe-area-inset-bottom), var(--ha-space-3));
+      }
 
-    ha-svg-icon.plus {
-      color: var(--primary-color);
-    }
+      .items .item-headline {
+        display: flex;
+        align-items: center;
+        gap: var(--ha-space-2);
+        min-height: var(--ha-space-9);
+        flex-wrap: wrap;
+      }
 
-    .selected-target {
-      display: inline-flex;
-      gap: var(--ha-space-1);
-      justify-content: center;
-      align-items: center;
-      border-radius: var(--ha-border-radius-md);
-      background: var(--ha-color-fill-neutral-normal-resting);
-      padding: 0 var(--ha-space-2) 0 var(--ha-space-1);
-      color: var(--ha-color-on-neutral-normal);
-      overflow: hidden;
-    }
-    .selected-target .label {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+      .items-title {
+        position: sticky;
+        display: flex;
+        align-items: center;
+        font-weight: var(--ha-font-weight-medium);
+        padding-top: var(--ha-space-2);
+        padding-bottom: var(--ha-space-2);
+        padding-inline-start: var(--ha-space-8);
+        padding-inline-end: var(--ha-space-3);
+        top: 0;
+        z-index: 1;
+        background-color: var(--card-background-color);
+      }
+      ha-bottom-sheet .items-title {
+        padding-top: var(--ha-space-3);
+      }
+      .scrolled .items-title:first-of-type {
+        box-shadow: var(--bar-box-shadow);
+        border-bottom: 1px solid var(--ha-color-border-neutral-quiet);
+      }
 
-    .selected-target ha-icon,
-    .selected-target ha-svg-icon,
-    .selected-target ha-domain-icon {
-      display: flex;
-      padding: var(--ha-space-1) 0;
-    }
+      ha-svg-icon.plus {
+        color: var(--primary-color);
+      }
 
-    .selected-target ha-floor-icon {
-      display: flex;
-      height: 32px;
-      width: 32px;
-      align-items: center;
-    }
-    .selected-target ha-domain-icon {
-      filter: grayscale(100%);
-    }
-  `;
+      .selected-target {
+        display: inline-flex;
+        gap: var(--ha-space-1);
+        justify-content: center;
+        align-items: center;
+        border-radius: var(--ha-border-radius-md);
+        background: var(--ha-color-fill-neutral-normal-resting);
+        padding: 0 var(--ha-space-2) 0 var(--ha-space-1);
+        border: var(--ha-border-width-sm) solid
+          var(--ha-color-border-neutral-quiet);
+        color: var(--ha-color-on-neutral-normal);
+        overflow: hidden;
+      }
+      .selected-target .label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .selected-target ha-icon,
+      .selected-target ha-svg-icon,
+      .selected-target ha-domain-icon {
+        display: flex;
+        padding: var(--ha-space-1) 0;
+      }
+
+      .selected-target ha-floor-icon {
+        display: flex;
+        height: 32px;
+        width: 32px;
+        align-items: center;
+      }
+      .selected-target ha-domain-icon {
+        filter: grayscale(100%);
+      }
+    `,
+  ];
 }
 
 declare global {

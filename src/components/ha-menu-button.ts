@@ -1,5 +1,6 @@
 import { mdiMenu } from "@mdi/js";
 import type { UnsubscribeFunc } from "home-assistant-js-websocket";
+import type { PropertyValues } from "lit";
 import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../common/dom/fire_event";
@@ -9,8 +10,6 @@ import "./ha-icon-button";
 
 @customElement("ha-menu-button")
 class HaMenuButton extends LitElement {
-  @property({ type: Boolean }) public hassio = false;
-
   @property({ type: Boolean }) public narrow = false;
 
   @property({ attribute: false }) public hass!: HomeAssistant;
@@ -59,19 +58,7 @@ class HaMenuButton extends LitElement {
     `;
   }
 
-  protected firstUpdated(changedProps) {
-    super.firstUpdated(changedProps);
-    if (!this.hassio) {
-      return;
-    }
-    // This component is used on Hass.io too, but Hass.io might run the UI
-    // on older frontends too, that don't have an always visible menu button
-    // in the sidebar.
-    this._alwaysVisible =
-      (Number((window.parent as any).frontendVersion) || 0) < 20190710;
-  }
-
-  protected willUpdate(changedProps) {
+  protected willUpdate(changedProps: PropertyValues<this>) {
     super.willUpdate(changedProps);
 
     if (!changedProps.has("narrow") && !changedProps.has("hass")) {

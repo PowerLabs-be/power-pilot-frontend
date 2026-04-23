@@ -98,7 +98,7 @@ export class HomeAssistantMain extends LitElement {
         });
         return;
       }
-      if (this._sidebarNarrow) {
+      if (this._sidebarNarrow || this.hass.kioskMode) {
         this._drawerOpen = ev.detail?.open ?? !this._drawerOpen;
       } else {
         fireEvent(this, "hass-dock-sidebar", {
@@ -120,13 +120,13 @@ export class HomeAssistantMain extends LitElement {
     });
   }
 
-  public willUpdate(changedProps: PropertyValues) {
+  public willUpdate(changedProps: PropertyValues<this>) {
     if (changedProps.has("route") && this._sidebarNarrow) {
       this._drawerOpen = false;
     }
   }
 
-  protected updated(changedProps: PropertyValues) {
+  protected updated(changedProps: PropertyValues<this>) {
     super.updated(changedProps);
 
     toggleAttribute(this, "expanded", this.hass.dockedSidebar === "docked");

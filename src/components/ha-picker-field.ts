@@ -1,4 +1,4 @@
-import { consume } from "@lit/context";
+import { consume, type ContextType } from "@lit/context";
 import { mdiClose, mdiMenuDown } from "@mdi/js";
 import {
   css,
@@ -11,9 +11,8 @@ import {
 import { customElement, property, query, state } from "lit/decorators";
 import { ifDefined } from "lit/directives/if-defined";
 import { fireEvent } from "../common/dom/fire_event";
-import { localizeContext } from "../data/context";
+import { internationalizationContext } from "../data/context";
 import { PickerMixin } from "../mixins/picker-mixin";
-import type { HomeAssistant } from "../types";
 import "./ha-combo-box-item";
 import type { HaComboBoxItem } from "./ha-combo-box-item";
 import "./ha-icon";
@@ -34,8 +33,8 @@ export class HaPickerField extends PickerMixin(LitElement) {
   @query("ha-combo-box-item", true) public item!: HaComboBoxItem;
 
   @state()
-  @consume({ context: localizeContext, subscribe: true })
-  private localize!: HomeAssistant["localize"];
+  @consume({ context: internationalizationContext, subscribe: true })
+  private _i18n!: ContextType<typeof internationalizationContext>;
 
   public async focus() {
     await this.updateComplete;
@@ -89,7 +88,7 @@ export class HaPickerField extends PickerMixin(LitElement) {
         ${this.unknown
           ? html`<div slot="supporting-text" class="unknown">
               ${this.unknownItemText ||
-              this.localize("ui.components.combo-box.unknown_item")}
+              this._i18n?.localize("ui.components.combo-box.unknown_item")}
             </div>`
           : nothing}
         ${showClearIcon
@@ -120,13 +119,14 @@ export class HaPickerField extends PickerMixin(LitElement) {
     return [
       css`
         ha-combo-box-item[disabled] {
-          background-color: var(
-            --mdc-text-field-disabled-fill-color,
-            whitesmoke
-          );
+          background-color: var(--ha-color-form-background-disabled);
+          --md-list-item-disabled-opacity: 0.5;
+          opacity: 0.5;
+          cursor: not-allowed;
         }
         ha-combo-box-item {
-          background-color: var(--mdc-text-field-fill-color, whitesmoke);
+          position: relative;
+          background-color: var(--ha-color-form-background);
           border-radius: var(--ha-border-radius-sm);
           border-end-end-radius: 0;
           border-end-start-radius: 0;
@@ -142,13 +142,6 @@ export class HaPickerField extends PickerMixin(LitElement) {
           --md-focus-ring-duration: 0s;
         }
 
-        /* Add Similar focus style as the text field */
-        ha-combo-box-item[disabled]:after {
-          background-color: var(
-            --mdc-text-field-disabled-line-color,
-            rgba(0, 0, 0, 0.42)
-          );
-        }
         ha-combo-box-item:after {
           display: block;
           content: "";
@@ -159,10 +152,7 @@ export class HaPickerField extends PickerMixin(LitElement) {
           right: 0;
           height: 1px;
           width: 100%;
-          background-color: var(
-            --mdc-text-field-idle-line-color,
-            rgba(0, 0, 0, 0.42)
-          );
+          background-color: var(--ha-color-border-neutral-loud);
           transform:
             height 180ms ease-in-out,
             background-color 180ms ease-in-out;
@@ -184,8 +174,8 @@ export class HaPickerField extends PickerMixin(LitElement) {
 
         .clear {
           margin: 0 -8px;
-          --mdc-icon-button-size: 32px;
-          --mdc-icon-size: 20px;
+          --ha-icon-button-size: 32px;
+          --ha-icon-button-padding-inline: var(--ha-space-1);
         }
         .arrow {
           --mdc-icon-size: 20px;

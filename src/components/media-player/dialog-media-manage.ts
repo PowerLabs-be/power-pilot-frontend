@@ -1,10 +1,10 @@
 import { animate } from "@lit-labs/motion";
 
 import {
-  mdiClose,
-  mdiDelete,
   mdiCheckboxBlankOutline,
   mdiCheckboxMarkedOutline,
+  mdiClose,
+  mdiDelete,
 } from "@mdi/js";
 import type { CSSResultGroup } from "lit";
 import { css, html, LitElement, nothing } from "lit";
@@ -25,9 +25,9 @@ import { showConfirmationDialog } from "../../dialogs/generic/show-dialog-box";
 import type { HomeAssistant } from "../../types";
 import "../ha-button";
 import "../ha-check-list-item";
-import "../ha-wa-dialog";
-import "../ha-dialog-header";
+import "../ha-dialog";
 import "../ha-dialog-footer";
+import "../ha-dialog-header";
 import "../ha-icon-button";
 import "../ha-list";
 import "../ha-spinner";
@@ -99,7 +99,7 @@ class DialogMediaManage extends LitElement {
     let fileIndex = 0;
 
     return html`
-      <ha-wa-dialog
+      <ha-dialog
         .hass=${this.hass}
         .open=${this._open}
         ?prevent-scrim-close=${this._uploading || this._deleting}
@@ -115,11 +115,11 @@ class DialogMediaManage extends LitElement {
                 ></ha-icon-button
               ></slot>`
             : nothing}
-          <span class="title" slot="title" id="dialog-box-title">
+          <h1 class="title" slot="title" id="dialog-box-title">
             ${this.hass.localize(
               "ui.components.media-browser.file_management.title"
             )}
-          </span>
+          </h1>
           ${this._selected.size === 0
             ? html`<ha-media-upload-button
                 .hass=${this.hass}
@@ -227,7 +227,7 @@ class DialogMediaManage extends LitElement {
                   )}
                 </ha-list>
               `}
-        ${isComponentLoaded(this.hass, "hassio")
+        ${isComponentLoaded(this.hass.config, "hassio")
           ? html`<ha-tip .hass=${this.hass}>
               ${this.hass.localize(
                 "ui.components.media-browser.file_management.tip_media_storage",
@@ -244,7 +244,7 @@ class DialogMediaManage extends LitElement {
               )}
             </ha-tip>`
           : nothing}
-      </ha-wa-dialog>
+      </ha-dialog>
     `;
   }
 
@@ -333,7 +333,7 @@ class DialogMediaManage extends LitElement {
   static get styles(): CSSResultGroup {
     return [
       css`
-        ha-wa-dialog {
+        ha-dialog {
           --dialog-content-padding: 0;
         }
         ha-dialog-header ha-media-upload-button,
@@ -365,6 +365,11 @@ class DialogMediaManage extends LitElement {
         .folders {
           color: var(--secondary-text-color);
           font-style: italic;
+        }
+        .title {
+          font: inherit;
+          font-size: inherit;
+          margin: inherit;
         }
       `,
     ];

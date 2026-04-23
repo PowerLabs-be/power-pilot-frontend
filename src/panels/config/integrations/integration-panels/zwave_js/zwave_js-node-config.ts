@@ -17,13 +17,13 @@ import type { HaProgressButton } from "../../../../../components/buttons/ha-prog
 import "../../../../../components/ha-alert";
 import "../../../../../components/ha-card";
 import "../../../../../components/ha-generic-picker";
-import "../../../../../components/ha-list-item";
 import type { PickerComboBoxItem } from "../../../../../components/ha-picker-combo-box";
 import "../../../../../components/ha-select";
+import type { HaSelectSelectEvent } from "../../../../../components/ha-select";
 import "../../../../../components/ha-selector/ha-selector-boolean";
 import "../../../../../components/ha-settings-row";
 import "../../../../../components/ha-svg-icon";
-import "../../../../../components/ha-textfield";
+import "../../../../../components/input/ha-input";
 import type {
   ZWaveJSNodeCapabilities,
   ZWaveJSNodeConfigParam,
@@ -41,11 +41,14 @@ import {
 import { showConfirmationDialog } from "../../../../../dialogs/generic/show-dialog-box";
 import "../../../../../layouts/hass-error-screen";
 import "../../../../../layouts/hass-loading-screen";
-import "../../../../../layouts/hass-tabs-subpage";
+import "../../../../../layouts/hass-subpage";
 import { haStyle } from "../../../../../resources/styles";
-import type { HomeAssistant, Route } from "../../../../../types";
+import type {
+  HomeAssistant,
+  Route,
+  ValueChangedEvent,
+} from "../../../../../types";
 import "../../../ha-config-section";
-import { configTabs } from "./zwave_js-config-router";
 import "./zwave_js-custom-param";
 
 const icons = {
@@ -85,7 +88,7 @@ class ZWaveJSNodeConfig extends LitElement {
     this.deviceId = this.route.path.substr(1);
   }
 
-  protected updated(changedProps: PropertyValues): void {
+  protected updated(changedProps: PropertyValues<this>): void {
     if (!this._config || changedProps.has("deviceId")) {
       this._fetchData();
     }
@@ -108,15 +111,18 @@ class ZWaveJSNodeConfig extends LitElement {
     const device = this.hass.devices[this.deviceId];
 
     const deviceName = device
-      ? computeDeviceNameDisplay(device, this.hass)
+      ? computeDeviceNameDisplay(device, this.hass.localize, this.hass.states)
       : "";
 
     return html`
-      <hass-tabs-subpage
+      <hass-subpage
         .hass=${this.hass}
         .narrow=${this.narrow}
-        .route=${this.route}
-        .tabs=${configTabs}
+        .header=${this.hass.localize(
+          "ui.panel.config.zwave_js.node_config.header"
+        )}
+        back-path="/config/zwave_js/dashboard?config_entry=${this
+          .configEntryId}"
       >
         <ha-config-section
           .narrow=${this.narrow}
@@ -222,7 +228,7 @@ class ZWaveJSNodeConfig extends LitElement {
             ></zwave_js-custom-param>
           </ha-card>
         </ha-config-section>
-      </hass-tabs-subpage>
+      </hass-subpage>
     `;
   }
 
@@ -349,7 +355,7 @@ class ZWaveJSNodeConfig extends LitElement {
         `;
       }
       return html`${labelAndDescription}
-        <ha-textfield
+        <ha-input
           type="number"
           .value=${item.value}
           .min=${item.metadata.min}
@@ -360,11 +366,12 @@ class ZWaveJSNodeConfig extends LitElement {
           .key=${id}
           .disabled=${!item.metadata.writeable}
           @change=${this._numericInputChanged}
-          .suffix=${item.metadata.unit}
-          .helper=${`${this.hass.localize("ui.panel.config.zwave_js.node_config.between_min_max", { min: item.metadata.min, max: item.metadata.max })}${defaultLabel ? `, ${defaultLabel}` : ""}`}
-          helperPersistent
+          .hint=${`${this.hass.localize("ui.panel.config.zwave_js.node_config.between_min_max", { min: item.metadata.min, max: item.metadata.max })}${defaultLabel ? `, ${defaultLabel}` : ""}`}
         >
-        </ha-textfield>`;
+          ${item.metadata.unit
+            ? html`<span slot="end">${item.metadata.unit}</span>`
+            : nothing}
+        </ha-input>`;
     }
 
     if (
@@ -374,7 +381,6 @@ class ZWaveJSNodeConfig extends LitElement {
       return html`
         ${labelAndDescription}
         <ha-select
-          fixedMenuPosition
           .disabled=${!item.metadata.writeable}
           .value=${item.value?.toString()}
           .key=${id}
@@ -383,12 +389,13 @@ class ZWaveJSNodeConfig extends LitElement {
           .propertyKey=${item.property_key}
           @selected=${this._dropdownSelected}
           .helper=${defaultLabel}
-        >
-          ${Object.entries(item.metadata.states).map(
-            ([key, entityState]) => html`
-              <ha-list-item .value=${key}>${entityState}</ha-list-item>
-            `
+          .options=${Object.entries(item.metadata.states).map(
+            ([key, entityState]) => ({
+              value: key,
+              label: entityState,
+            })
           )}
+        >
         </ha-select>
       `;
     }
@@ -457,8 +464,8 @@ class ZWaveJSNodeConfig extends LitElement {
     this._updateConfigParameter(ev.target, ev.detail.value ? 1 : 0);
   }
 
-  private _dropdownSelected(ev) {
-    this._handleEnumeratedPickerValueChanged(ev, ev.target.value);
+  private _dropdownSelected(ev: HaSelectSelectEvent) {
+    this._handleEnumeratedPickerValueChanged(ev, ev.detail.value);
   }
 
   private _pickerValueChanged(ev) {
@@ -469,7 +476,7 @@ class ZWaveJSNodeConfig extends LitElement {
     if (ev.target === undefined || this._config![ev.target.key] === undefined) {
       return;
     }
-    if (this._config![ev.target.key].value?.toString() === value) {
+    if (this._config![ev.target.key].value === value) {
       return;
     }
     this._setResult(ev.target.key, undefined);
@@ -547,7 +554,7 @@ class ZWaveJSNodeConfig extends LitElement {
     id: string,
     item: ZWaveJSNodeConfigParam
   ) {
-    return (ev: CustomEvent<{ value: number }>) =>
+    return (ev: ValueChangedEvent<number>) =>
       this._numericInputChanged({
         ...ev,
         target: {
@@ -751,7 +758,7 @@ class ZWaveJSNodeConfig extends LitElement {
           white-space: normal;
         }
 
-        :host(:not([narrow])) ha-settings-row ha-textfield {
+        :host(:not([narrow])) ha-settings-row ha-input {
           text-align: right;
         }
 

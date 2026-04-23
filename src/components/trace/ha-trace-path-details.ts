@@ -5,6 +5,8 @@ import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
 import { formatDateTimeWithSeconds } from "../../common/datetime/format_date_time";
+import type { Trigger } from "../../data/automation";
+import { migrateAutomationTrigger } from "../../data/automation";
 import { describeCondition, describeTrigger } from "../../data/automation_i18n";
 import { fullEntitiesContext, labelsContext } from "../../data/context";
 import type { EntityRegistryEntry } from "../../data/entity/entity_registry";
@@ -52,7 +54,7 @@ export class HaTracePathDetails extends LitElement {
 
   @state()
   @consume({ context: fullEntitiesContext, subscribe: true })
-  _entityReg!: EntityRegistryEntry[];
+  _entityReg: EntityRegistryEntry[] = [];
 
   @state()
   @consume({ context: labelsContext, subscribe: true })
@@ -166,7 +168,9 @@ export class HaTracePathDetails extends LitElement {
                 : selectedType === "trigger"
                   ? html`<h2>
                       ${describeTrigger(
-                        currentDetail,
+                        migrateAutomationTrigger({
+                          ...currentDetail,
+                        }) as Trigger,
                         this.hass,
                         this._entityReg
                       )}
