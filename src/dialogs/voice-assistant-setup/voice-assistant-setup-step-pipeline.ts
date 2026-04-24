@@ -340,7 +340,7 @@ export class HaVoiceAssistantSetupStepPipeline extends LitElement {
           return false;
         }
 
-        let pipelineName = "Home Assistant Cloud";
+        let pipelineName = "Power Pilot Cloud";
         let i = 1;
         while (
           pipelines.pipelines.find(
@@ -348,7 +348,7 @@ export class HaVoiceAssistantSetupStepPipeline extends LitElement {
             (pipeline) => pipeline.name === pipelineName
           )
         ) {
-          pipelineName = `Home Assistant Cloud ${i}`;
+          pipelineName = `Power Pilot Cloud ${i}`;
           i++;
         }
 

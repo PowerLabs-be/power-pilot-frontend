@@ -274,10 +274,9 @@ class HaOnboarding extends litLocalizeLiteMixin(HassElement) {
   private async _fetchInstallationType(): Promise<void> {
     try {
       const response = await fetchInstallationType();
-      this._supervisor = [
-        "Home Assistant OS",
-        "Home Assistant Supervised",
-      ].includes(response.installation_type);
+      this._supervisor = ["Power Pilot OS", "Power Pilot Supervised"].includes(
+        response.installation_type
+      );
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error(

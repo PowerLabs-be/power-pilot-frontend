@@ -45,7 +45,7 @@ export class CloudLoginPanel extends LitElement {
       <hass-subpage
         .hass=${this.hass}
         .narrow=${this.narrow}
-        header="Home Assistant Cloud"
+        header="Power Pilot Cloud"
       >
         <ha-dropdown slot="toolbar-icon" @wa-select=${this._handleMenuAction}>
           <ha-icon-button

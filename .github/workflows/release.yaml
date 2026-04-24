@@ -36,7 +36,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Verify version
-        uses: home-assistant/actions/helpers/verify-version@f6f29a7ee3fa0eccadf3620a7b9ee00ab54ec03b # master
+        uses: PowerLabs-be/power-pilot-actions/helpers/verify-version@master
 
       - name: Setup Node
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
@@ -80,7 +80,7 @@ jobs:
           # Sleep to give pypi time to populate the new version across mirrors
           sleep 240
           version=$(echo "$GITHUB_REF" | awk -F"/" '{print $NF}' )
-          echo "home-assistant-frontend==$version" > ./requirements.txt
+          echo "power-pilot-frontend==$version" > ./requirements.txt
 
       # home-assistant/wheels doesn't support SHA pinning
       - name: Build wheels
@@ -118,9 +118,9 @@ jobs:
       - name: Tar folder
         env:
           TAG_NAME: ${{ github.event.release.tag_name }}
-        run: tar -czf "landing-page/home_assistant_frontend_landingpage-${TAG_NAME}.tar.gz" -C landing-page/dist .
+        run: tar -czf "landing-page/power_pilot_frontend_landingpage-${TAG_NAME}.tar.gz" -C landing-page/dist .
       - name: Upload release asset
         env:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ github.event.release.tag_name }}
-        run: gh release upload "$TAG_NAME" "landing-page/home_assistant_frontend_landingpage-${TAG_NAME}.tar.gz" --clobber
+        run: gh release upload "$TAG_NAME" "landing-page/power_pilot_frontend_landingpage-${TAG_NAME}.tar.gz" --clobber

@@ -4,10 +4,10 @@ import type { CloudStatus } from "./cloud";
 
 export interface InstallationType {
   installation_type:
-    | "Home Assistant Operating System"
-    | "Home Assistant Container"
-    | "Home Assistant Supervised"
-    | "Home Assistant Core"
+    | "Power Pilot Operating System"
+    | "Power Pilot Container"
+    | "Power Pilot Supervised"
+    | "Power Pilot Core"
     | "Unknown";
 }
 
