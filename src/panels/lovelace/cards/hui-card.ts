@@ -71,18 +71,6 @@ export class HuiCard extends ConditionalListenerMixin<LovelaceCardConfig>(
       ...elementOptions,
       ...configOptions,
     };
-
-    // If the element has fixed rows or columns, we use the values from the element
-    if (elementOptions.fixed_rows) {
-      mergedConfig.rows = elementOptions.rows;
-      delete mergedConfig.min_rows;
-      delete mergedConfig.max_rows;
-    }
-    if (elementOptions.fixed_columns) {
-      mergedConfig.columns = elementOptions.columns;
-      delete mergedConfig.min_columns;
-      delete mergedConfig.max_columns;
-    }
     return mergedConfig;
   }
 
@@ -178,7 +166,7 @@ export class HuiCard extends ConditionalListenerMixin<LovelaceCardConfig>(
     this._updateVisibility();
   }
 
-  protected willUpdate(changedProps: PropertyValues<typeof this>): void {
+  protected willUpdate(changedProps: PropertyValues<this>): void {
     super.willUpdate(changedProps);
 
     if (!this._element) {
@@ -186,7 +174,7 @@ export class HuiCard extends ConditionalListenerMixin<LovelaceCardConfig>(
     }
   }
 
-  protected update(changedProps: PropertyValues<typeof this>) {
+  protected update(changedProps: PropertyValues<this>) {
     super.update(changedProps);
 
     if (this._element) {
@@ -269,7 +257,11 @@ export class HuiCard extends ConditionalListenerMixin<LovelaceCardConfig>(
     const visible =
       conditionsMet ??
       (!this.config?.visibility ||
-        checkConditionsMet(this.config.visibility, this.hass));
+        checkConditionsMet(
+          this.config.visibility,
+          this.hass,
+          this._conditionContext
+        ));
     this._setElementVisibility(visible);
   }
 

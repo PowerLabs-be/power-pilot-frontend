@@ -1,16 +1,20 @@
 import "@home-assistant/webawesome/dist/components/popover/popover";
 import type { RenderItemFunction } from "@lit-labs/virtualizer/virtualize";
 import { mdiPlaylistPlus } from "@mdi/js";
-import { css, html, LitElement, nothing, type CSSResultGroup } from "lit";
+import {
+  css,
+  html,
+  LitElement,
+  nothing,
+  type CSSResultGroup,
+  type PropertyValues,
+} from "lit";
 import { customElement, property, query, state } from "lit/decorators";
 import { ifDefined } from "lit/directives/if-defined";
-import memoizeOne from "memoize-one";
 import { tinykeys } from "tinykeys";
 import { fireEvent } from "../common/dom/fire_event";
 import { PickerMixin } from "../mixins/picker-mixin";
 import type { FuseWeightedKey } from "../resources/fuseMultiTerm";
-import type { HomeAssistant } from "../types";
-import { isIosApp } from "../util/is_ios";
 import "./ha-bottom-sheet";
 import "./ha-button";
 import "./ha-combo-box-item";
@@ -26,8 +30,6 @@ import "./ha-svg-icon";
 
 @customElement("ha-generic-picker")
 export class HaGenericPicker extends PickerMixin(LitElement) {
-  @property({ attribute: false }) public hass?: HomeAssistant;
-
   @property({ type: Boolean, attribute: "allow-custom-value" })
   public allowCustomValue;
 
@@ -39,9 +41,9 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
   public getItems!: (
     searchString?: string,
     section?: string
-  ) => (PickerComboBoxItem | string)[];
+  ) => (PickerComboBoxItem | string)[] | undefined;
 
-  @property({ attribute: false, type: Array })
+  @property({ attribute: false })
   public getAdditionalItems?: (searchString?: string) => PickerComboBoxItem[];
 
   @property({ attribute: false })
@@ -96,6 +98,8 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
 
   @property({ attribute: "selected-section" }) public selectedSection?: string;
 
+  @property({ attribute: false }) public popoverAnchor?: Element | null;
+
   @property({ type: Boolean, attribute: "use-top-label" })
   public useTopLabel = false;
 
@@ -106,6 +110,11 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
 
   @query("ha-picker-combo-box") private _comboBox?: HaPickerComboBox;
 
+  // disabled till iOS app fix the "focus_element" implementation
+  // @state()
+  // @consume({ context: authContext, subscribe: true })
+  // private auth?: ContextType<typeof authContext>;
+
   @state() private _opened = false;
 
   @state() private _pickerWrapperOpen = false;
@@ -113,6 +122,10 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
   @state() private _popoverWidth = 0;
 
   @state() private _openedNarrow = false;
+
+  @state() private _unknownValue = false;
+
+  @state() private _selectedValue?: string;
 
   static shadowRootOptions = {
     ...LitElement.shadowRootOptions,
@@ -129,6 +142,21 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
   @property({ type: Boolean, reflect: true }) public invalid = false;
 
   private _unsubscribeTinyKeys?: () => void;
+
+  protected willUpdate(changedProperties: PropertyValues<this>) {
+    if (changedProperties.has("value")) {
+      this._setUnknownValue();
+    }
+  }
+
+  public setFieldValue(value: string) {
+    if (this._comboBox) {
+      this._comboBox.setFieldValue(value);
+      return;
+    }
+    // Store initial value to set when opened
+    this._initialFieldValue = value;
+  }
 
   protected render() {
     // Only show label if it's not a top label and there is a value.
@@ -157,11 +185,7 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
                   type="button"
                   class=${this._opened ? "opened" : ""}
                   compact
-                  .unknown=${this._unknownValue(
-                    this.allowCustomValue,
-                    this.value,
-                    this.getItems()
-                  )}
+                  .unknown=${this._unknownValue}
                   .unknownItemText=${this.unknownItemText}
                   aria-label=${ifDefined(this.label)}
                   @click=${this.open}
@@ -170,7 +194,6 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
                   .image=${this.image}
                   .label=${label}
                   .placeholder=${this.placeholder}
-                  .helper=${this.helper}
                   .value=${this.value}
                   .valueRenderer=${this.valueRenderer}
                   .required=${this.required}
@@ -182,40 +205,43 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
                 </ha-picker-field>`}
           </slot>
         </div>
-        ${!this._openedNarrow && (this._pickerWrapperOpen || this._opened)
-          ? html`
-              <wa-popover
-                .open=${this._pickerWrapperOpen}
-                style="--body-width: ${this._popoverWidth}px;"
-                without-arrow
-                distance="-4"
-                .placement=${this.popoverPlacement}
-                for="picker"
-                auto-size="vertical"
-                auto-size-padding="16"
-                @wa-after-show=${this._dialogOpened}
-                @wa-after-hide=${this._hidePicker}
-                trap-focus
-                role="dialog"
-                aria-modal="true"
-                aria-label=${this.label || "Select option"}
-              >
-                ${this._renderComboBox()}
-              </wa-popover>
-            `
-          : this._pickerWrapperOpen || this._opened
-            ? html`<ha-bottom-sheet
-                flexcontent
-                .open=${this._pickerWrapperOpen}
-                @wa-after-show=${this._dialogOpened}
-                @closed=${this._hidePicker}
-                role="dialog"
-                aria-modal="true"
-                aria-label=${this.label || "Select option"}
-              >
-                ${this._renderComboBox(true)}
-              </ha-bottom-sheet>`
-            : nothing}
+        ${this._pickerWrapperOpen || this._opened
+          ? this._openedNarrow
+            ? html`
+                <ha-bottom-sheet
+                  flexcontent
+                  .open=${this._pickerWrapperOpen}
+                  @wa-after-show=${this._dialogOpened}
+                  @closed=${this._hidePicker}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label=${this.label || "Select option"}
+                >
+                  ${this._renderComboBox(true)}
+                </ha-bottom-sheet>
+              `
+            : html`
+                <wa-popover
+                  .open=${this._pickerWrapperOpen}
+                  style="--body-width: ${this._popoverWidth}px;"
+                  without-arrow
+                  distance="-4"
+                  .placement=${this.popoverPlacement}
+                  .for=${this.popoverAnchor ? null : "picker"}
+                  .anchor=${this.popoverAnchor ?? null}
+                  auto-size="vertical"
+                  auto-size-padding="16"
+                  @wa-after-show=${this._dialogOpened}
+                  @wa-after-hide=${this._hidePicker}
+                  trap-focus
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label=${this.label || "Select option"}
+                >
+                  ${this._renderComboBox()}
+                </wa-popover>
+              `
+          : nothing}
       </div>
       ${this._renderHelper()}`;
   }
@@ -227,10 +253,9 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
     return html`
       <ha-picker-combo-box
         id="combo-box"
-        .hass=${this.hass}
         .allowCustomValue=${this.allowCustomValue}
         .label=${this.searchLabel}
-        .value=${this.value}
+        .value=${this._selectedValue ?? this.value}
         @value-changed=${this._valueChanged}
         .rowRenderer=${this.rowRenderer}
         .notFoundLabel=${this.notFoundLabel}
@@ -248,27 +273,23 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
     `;
   }
 
-  private _unknownValue = memoizeOne(
-    (
-      allowCustomValue: boolean,
-      value?: string,
-      items?: (PickerComboBoxItem | string)[]
-    ) => {
-      if (
-        allowCustomValue ||
-        value === undefined ||
-        value === null ||
-        value === "" ||
-        !items
-      ) {
-        return false;
-      }
-
-      return !items.some(
-        (item) => typeof item !== "string" && item.id === value
-      );
+  private _setUnknownValue = () => {
+    const items = this.getItems();
+    if (
+      this.allowCustomValue ||
+      this.value === undefined ||
+      this.value === null ||
+      this.value === "" ||
+      !items
+    ) {
+      this._unknownValue = false;
+      return;
     }
-  );
+
+    this._unknownValue = !items.some(
+      (item) => typeof item !== "string" && item.id === this.value
+    );
+  };
 
   private _renderHelper() {
     const showError = this.invalid && this.errorMessage;
@@ -283,18 +304,32 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
     </ha-input-helper-text>`;
   }
 
+  private _initialFieldValue?: string;
+
+  public refreshItems() {
+    this._comboBox?.refreshItems();
+  }
+
   private _dialogOpened = () => {
     this._opened = true;
+    fireEvent(this, "picker-opened");
     requestAnimationFrame(() => {
-      if (this.hass && isIosApp(this.hass)) {
-        this.hass.auth.external!.fireMessage({
-          type: "focus_element",
-          payload: {
-            element_id: "combo-box",
-          },
-        });
-        return;
+      // Set initial field value if needed
+      if (this._initialFieldValue) {
+        this._comboBox?.setFieldValue(this._initialFieldValue);
+        this._initialFieldValue = undefined;
       }
+      // disabled till iOS app fix the "focus_element" implementation
+      // if (this.auth?.external && isIosApp(this.auth.external)) {
+      //   this.auth.external.fireMessage({
+      //     type: "focus_element",
+      //     payload: {
+      //       element_id: "combo-box",
+      //     },
+      //   });
+      //   return;
+      // }
+
       this._comboBox?.focus();
     });
   };
@@ -308,7 +343,9 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
 
     this._opened = false;
     this._pickerWrapperOpen = false;
+    this._selectedValue = undefined;
     this._unsubscribeTinyKeys?.();
+    fireEvent(this, "picker-closed");
   }
 
   private _valueChanged(ev: CustomEvent) {
@@ -331,11 +368,17 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
     fireEvent(this, "value-changed", { value });
   }
 
-  public async open(ev?: Event) {
+  public async open(
+    ev?: Event,
+    options?: {
+      selectedValue?: string;
+    }
+  ) {
     ev?.stopPropagation();
     if (this.disabled) {
       return;
     }
+    this._selectedValue = options?.selectedValue;
     this._openedNarrow = this._narrow;
     this._popoverWidth = this._containerElement?.offsetWidth || 250;
     this._pickerWrapperOpen = true;
@@ -376,6 +419,7 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
         .container {
           position: relative;
           display: block;
+          max-width: 100%;
         }
         label[disabled] {
           color: var(--mdc-text-field-disabled-ink-color, rgba(0, 0, 0, 0.6));
@@ -394,6 +438,10 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
 
         wa-popover {
           --wa-space-l: 0;
+        }
+
+        wa-popover::part(dialog)::backdrop {
+          background: none;
         }
 
         wa-popover::part(body) {
@@ -434,5 +482,10 @@ export class HaGenericPicker extends PickerMixin(LitElement) {
 declare global {
   interface HTMLElementTagNameMap {
     "ha-generic-picker": HaGenericPicker;
+  }
+
+  interface HASSDomEvents {
+    "picker-closed": undefined;
+    "picker-opened": undefined;
   }
 }

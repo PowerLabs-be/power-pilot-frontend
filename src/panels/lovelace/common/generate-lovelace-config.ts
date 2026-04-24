@@ -32,7 +32,6 @@ import type {
 } from "../cards/types";
 import type { EntityConfig } from "../entity-rows/types";
 import type { ButtonsHeaderFooterConfig } from "../header-footer/types";
-import { computeLovelaceEntityName } from "./entity/compute-lovelace-entity-name";
 
 const HIDE_DOMAIN = new Set([
   "ai_task",
@@ -271,14 +270,14 @@ export const computeCards = (
           ? computeStateName(states[a])
           : ""
         : states[a.entity]
-          ? computeLovelaceEntityName(hass, states[a.entity], a.name)
+          ? hass.formatEntityName(states[a.entity], a.name)
           : "",
       typeof b === "string"
         ? states[b]
           ? computeStateName(states[b])
           : ""
         : states[b.entity]
-          ? computeLovelaceEntityName(hass, states[b.entity], b.name)
+          ? hass.formatEntityName(states[b.entity], b.name)
           : ""
     );
   });
@@ -368,6 +367,7 @@ export const generateViewConfig = (
   path: string,
   title: string | undefined,
   icon: string | undefined,
+  show_icon_and_title: boolean | undefined,
   entities: HassEntities
 ): LovelaceViewConfig => {
   const ungroupedEntitites: Record<string, string[]> = {};
@@ -497,6 +497,9 @@ export const generateViewConfig = (
   if (icon) {
     view.icon = icon;
   }
+  if (show_icon_and_title) {
+    view.show_icon_and_title = show_icon_and_title;
+  }
 
   return view;
 };
@@ -517,6 +520,7 @@ export const generateDefaultViewConfig = (
   const path = "default_view";
   const title = "Home";
   const icon = undefined;
+  const show_icon_and_title = undefined;
 
   // In the case of a default view, we want to use the group order attribute
   const groupOrders = {};
@@ -566,6 +570,7 @@ export const generateDefaultViewConfig = (
     path,
     title,
     icon,
+    show_icon_and_title,
     splittedByGroups.ungrouped
   );
 
@@ -638,7 +643,7 @@ export const generateDefaultViewConfig = (
       (source) => source.type === "grid"
     ) as GridSourceTypeEnergyPreference | undefined;
 
-    if (grid && grid.flow_from.length > 0) {
+    if (grid && grid.stat_energy_from) {
       energyCard = {
         title: localize(
           "ui.panel.lovelace.cards.energy.energy_distribution.title_today"

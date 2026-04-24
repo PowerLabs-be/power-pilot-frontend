@@ -11,7 +11,11 @@ import type { LovelaceBadgeConfig } from "../../../../data/lovelace/config/badge
 import type { LovelaceSectionRawConfig } from "../../../../data/lovelace/config/section";
 import type { LovelaceViewConfig } from "../../../../data/lovelace/config/view";
 import type { HomeAssistant } from "../../../../types";
-import type { HeadingCardConfig } from "../../cards/types";
+import type {
+  EmptyStateCardConfig,
+  HeadingCardConfig,
+} from "../../cards/types";
+import type { ButtonHeadingBadgeConfig } from "../../heading-badges/types";
 import { computeAreaTileCardConfig } from "../areas/helpers/areas-strategy-helper";
 import {
   getSummaryLabel,
@@ -24,6 +28,7 @@ import {
 export interface HomeAreaViewStrategyConfig {
   type: "home-area";
   area?: string;
+  home_panel?: boolean;
 }
 
 @customElement("home-area-view-strategy")
@@ -91,6 +96,15 @@ export class HomeAreaViewStrategy extends ReactiveElement {
     } = entitiesBySummary;
 
     if (light.length > 0) {
+      const anyOnCondition = {
+        condition: "or" as const,
+        conditions: light.map((entityId) => ({
+          condition: "state" as const,
+          entity: entityId,
+          state: "on",
+        })),
+      };
+
       sections.push({
         type: "grid",
         cards: [
@@ -98,10 +112,46 @@ export class HomeAreaViewStrategy extends ReactiveElement {
             type: "heading",
             heading: getSummaryLabel(hass.localize, "light"),
             icon: HOME_SUMMARIES_ICONS.light,
-            tap_action: {
-              action: "navigate",
-              navigation_path: "/light?historyBack=1",
-            },
+            tap_action: hass.panels.light
+              ? {
+                  action: "navigate",
+                  navigation_path: "/light?historyBack=1",
+                }
+              : undefined,
+            badges: [
+              {
+                type: "button",
+                icon: "mdi:power",
+                text: hass.localize("ui.panel.lovelace.strategy.light.off"),
+                tap_action: {
+                  action: "perform-action",
+                  perform_action: "light.turn_on",
+                  target: {
+                    area_id: config.area,
+                  },
+                },
+                visibility: [
+                  {
+                    condition: "not",
+                    conditions: [anyOnCondition],
+                  },
+                ],
+              } satisfies ButtonHeadingBadgeConfig,
+              {
+                type: "button",
+                icon: "mdi:power",
+                color: "orange",
+                text: hass.localize("ui.panel.lovelace.strategy.light.on"),
+                tap_action: {
+                  action: "perform-action",
+                  perform_action: "light.turn_off",
+                  target: {
+                    area_id: config.area,
+                  },
+                },
+                visibility: [anyOnCondition],
+              } satisfies ButtonHeadingBadgeConfig,
+            ],
           } satisfies HeadingCardConfig,
           ...light.map(computeTileCard),
         ],
@@ -116,10 +166,12 @@ export class HomeAreaViewStrategy extends ReactiveElement {
             type: "heading",
             heading: getSummaryLabel(hass.localize, "climate"),
             icon: HOME_SUMMARIES_ICONS.climate,
-            tap_action: {
-              action: "navigate",
-              navigation_path: "/climate?historyBack=1",
-            },
+            tap_action: hass.panels.climate
+              ? {
+                  action: "navigate",
+                  navigation_path: "/climate?historyBack=1",
+                }
+              : undefined,
           } satisfies HeadingCardConfig,
           ...climate.map(computeTileCard),
         ],
@@ -134,10 +186,12 @@ export class HomeAreaViewStrategy extends ReactiveElement {
             type: "heading",
             heading: getSummaryLabel(hass.localize, "security"),
             icon: HOME_SUMMARIES_ICONS.security,
-            tap_action: {
-              action: "navigate",
-              navigation_path: "/security?historyBack=1",
-            },
+            tap_action: hass.panels.security
+              ? {
+                  action: "navigate",
+                  navigation_path: "/security?historyBack=1",
+                }
+              : undefined,
           } satisfies HeadingCardConfig,
           ...security.map(computeTileCard),
         ],
@@ -249,11 +303,6 @@ export class HomeAreaViewStrategy extends ReactiveElement {
       device_class: "battery",
     });
 
-    const energyFilter = generateEntityFilter(hass, {
-      domain: "sensor",
-      device_class: ["energy", "power"],
-    });
-
     const primaryFilter = generateEntityFilter(hass, {
       entity_category: "none",
     });
@@ -265,7 +314,7 @@ export class HomeAreaViewStrategy extends ReactiveElement {
         batteryFilter(e)
       );
       const entities = deviceEntities.entities.filter(
-        (e) => !batteryFilter(e) && !energyFilter(e) && primaryFilter(e)
+        (e) => !batteryFilter(e) && primaryFilter(e)
       );
 
       if (entities.length === 0) {
@@ -278,7 +327,7 @@ export class HomeAreaViewStrategy extends ReactiveElement {
       if (device) {
         heading =
           computeDeviceName(device) ||
-          hass.localize("ui.panel.lovelace.strategy.home.unamed_device");
+          hass.localize("ui.panel.lovelace.strategy.home.unnamed_device");
       } else {
         heading = hass.localize("ui.panel.lovelace.strategy.home.others");
       }
@@ -352,6 +401,59 @@ export class HomeAreaViewStrategy extends ReactiveElement {
           ...automations.map(computeTileCard),
         ],
       });
+    }
+
+    // No sections, show empty state
+    if (sections.length === 0) {
+      return {
+        type: "panel",
+        cards: [
+          {
+            type: "empty-state",
+            icon: area.icon || "mdi:shape-square-rounded-plus",
+            icon_color: "primary",
+            content_only: true,
+            title: hass.localize(
+              "ui.panel.lovelace.strategy.home-area.no_devices_title"
+            ),
+            content: hass.localize(
+              "ui.panel.lovelace.strategy.home-area.no_devices_content"
+            ),
+            ...(config.home_panel && hass.user?.is_admin
+              ? {
+                  buttons: [
+                    {
+                      icon: "mdi:plus",
+                      text: hass.localize(
+                        "ui.panel.lovelace.strategy.home-area.no_devices_add_device"
+                      ),
+                      appearance: "plain",
+                      variant: "brand",
+                      tap_action: {
+                        action: "fire-dom-event",
+                        home_panel: {
+                          type: "add_integration",
+                        },
+                      },
+                    },
+                    {
+                      icon: "mdi:home-plus",
+                      text: hass.localize(
+                        "ui.panel.lovelace.strategy.home-area.no_devices_assign_device"
+                      ),
+                      appearance: "plain",
+                      variant: "brand",
+                      tap_action: {
+                        action: "navigate",
+                        navigation_path: "/home/other-devices",
+                      },
+                    },
+                  ],
+                }
+              : {}),
+          } as EmptyStateCardConfig,
+        ],
+      };
     }
 
     // Allow between 2 and 3 columns (the max should be set to define the width of the header)

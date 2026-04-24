@@ -8,6 +8,7 @@ import type { HaEntityPicker } from "../../../components/entity/ha-entity-picker
 import "../../../components/ha-alert";
 import "../../../components/ha-aliases-editor";
 import "../../../components/ha-button";
+import "../../../components/ha-dialog";
 import "../../../components/ha-dialog-footer";
 import "../../../components/ha-expansion-panel";
 import "../../../components/ha-floor-picker";
@@ -16,22 +17,33 @@ import "../../../components/ha-labels-picker";
 import "../../../components/ha-picture-upload";
 import type { HaPictureUpload } from "../../../components/ha-picture-upload";
 import "../../../components/ha-settings-row";
-import "../../../components/ha-textfield";
-import "../../../components/ha-wa-dialog";
+import "../../../components/ha-suggest-with-ai-button";
+import type { SuggestWithAIGenerateTask } from "../../../components/ha-suggest-with-ai-button";
+import "../../../components/input/ha-input";
+import type { HaInput } from "../../../components/input/ha-input";
+import type { GenDataTaskResult } from "../../../data/ai_task";
 import type {
   AreaRegistryEntry,
   AreaRegistryEntryMutableParams,
-} from "../../../data/area_registry";
-import { deleteAreaRegistryEntry } from "../../../data/area_registry";
+} from "../../../data/area/area_registry";
+import { deleteAreaRegistryEntry } from "../../../data/area/area_registry";
 import {
   SENSOR_DEVICE_CLASS_HUMIDITY,
   SENSOR_DEVICE_CLASS_TEMPERATURE,
 } from "../../../data/sensor";
-import type { HassDialog } from "../../../dialogs/make-dialog-manager";
 import { showConfirmationDialog } from "../../../dialogs/generic/show-dialog-box";
 import type { CropOptions } from "../../../dialogs/image-cropper-dialog/show-image-cropper-dialog";
+import type { HassDialog } from "../../../dialogs/make-dialog-manager";
 import { haStyleDialog } from "../../../resources/styles";
 import type { HomeAssistant, ValueChangedEvent } from "../../../types";
+import {
+  type MetadataSuggestionInclude,
+  type MetadataSuggestionResult,
+  generateMetadataSuggestionTask,
+  processMetadataSuggestion,
+} from "../common/suggest-metadata-ai";
+import { fetchLabels } from "../common/suggest-metadata-helpers";
+import { buildAreaMetadataInspirations } from "../common/suggest-metadata-inspirations";
 import type { AreaRegistryDetailDialogParams } from "./show-dialog-area-registry-detail";
 
 const cropOptions: CropOptions = {
@@ -71,9 +83,15 @@ class DialogAreaDetail
 
   @state() private _params?: AreaRegistryDetailDialogParams;
 
-  @state() private _submitting?: boolean;
+  @state() private _submitting = false;
 
   @state() private _open = false;
+
+  @state() private _suggestionInclude: MetadataSuggestionInclude = {
+    name: true,
+    labels: true,
+    floor: true,
+  };
 
   public async showDialog(
     params: AreaRegistryDetailDialogParams
@@ -127,7 +145,7 @@ class DialogAreaDetail
           `
         : nothing}
 
-      <ha-textfield
+      <ha-input
         autofocus
         .value=${this._name}
         @input=${this._nameChanged}
@@ -135,8 +153,9 @@ class DialogAreaDetail
         .validationMessage=${this.hass.localize(
           "ui.panel.config.areas.editor.name_required"
         )}
+        auto-validate
         required
-      ></ha-textfield>
+      ></ha-input>
 
       <ha-icon-picker
         .hass=${this.hass}
@@ -242,6 +261,76 @@ class DialogAreaDetail
     `;
   }
 
+  private async _getLabelNames(): Promise<string[]> {
+    if (!this._labels.length) {
+      return [];
+    }
+    const labels = await fetchLabels(this.hass.connection);
+    return this._labels
+      .map((labelId) => labels[labelId])
+      .filter((name): name is string => Boolean(name));
+  }
+
+  private _generateTask = async (): Promise<SuggestWithAIGenerateTask> => {
+    this._suggestionInclude = {
+      ...this._suggestionInclude,
+      name: this._name.trim() === "",
+    };
+
+    return generateMetadataSuggestionTask<{
+      name: string;
+      aliases: string[];
+      labels: string[];
+      floor: string | null;
+      temperature_entity: string | null;
+      humidity_entity: string | null;
+    }>(
+      this.hass.connection,
+      this.hass.language,
+      "area",
+      {
+        name: this._name,
+        aliases: this._aliases,
+        labels: await this._getLabelNames(),
+        floor: this._floor ? this.hass.floors?.[this._floor]?.name : null,
+        temperature_entity: this._temperatureEntity
+          ? (this.hass.states[this._temperatureEntity]?.attributes
+              ?.friendly_name ?? null)
+          : null,
+        humidity_entity: this._humidityEntity
+          ? (this.hass.states[this._humidityEntity]?.attributes
+              ?.friendly_name ?? null)
+          : null,
+      },
+      await buildAreaMetadataInspirations(this.hass.connection),
+      this._suggestionInclude
+    );
+  };
+
+  private async _handleSuggestion(
+    event: CustomEvent<GenDataTaskResult<MetadataSuggestionResult>>
+  ) {
+    const result = event.detail;
+    const processed = await processMetadataSuggestion(
+      this.hass.connection,
+      "area",
+      result,
+      this._suggestionInclude
+    );
+
+    if (processed.name) {
+      this._name = processed.name;
+    }
+
+    if (processed.labels?.length) {
+      this._labels = processed.labels;
+    }
+
+    if (processed.floor) {
+      this._floor = processed.floor;
+    }
+  }
+
   protected render() {
     if (!this._params) {
       return nothing;
@@ -251,14 +340,21 @@ class DialogAreaDetail
     const isNew = !entry;
 
     return html`
-      <ha-wa-dialog
+      <ha-dialog
         .hass=${this.hass}
         .open=${this._open}
         header-title=${entry
           ? this.hass.localize("ui.panel.config.areas.editor.update_area")
           : this.hass.localize("ui.panel.config.areas.editor.create_area")}
+        prevent-scrim-close
         @closed=${this._dialogClosed}
       >
+        <ha-suggest-with-ai-button
+          slot="headerActionItems"
+          .hass=${this.hass}
+          .generateTask=${this._generateTask}
+          @suggestion=${this._handleSuggestion}
+        ></ha-suggest-with-ai-button>
         <div>
           ${this._error
             ? html`<ha-alert alert-type="error">${this._error}</ha-alert>`
@@ -281,18 +377,24 @@ class DialogAreaDetail
                   ${this.hass.localize("ui.common.delete")}
                 </ha-button>
               `
-            : nothing}
+            : html`<ha-button
+                appearance="plain"
+                slot="secondaryAction"
+                @click=${this.closeDialog}
+              >
+                ${this.hass.localize("ui.common.cancel")}
+              </ha-button>`}
           <ha-button
             slot="primaryAction"
             @click=${this._updateEntry}
-            .disabled=${nameInvalid || !!this._submitting}
+            .disabled=${nameInvalid || this._submitting}
           >
             ${entry
               ? this.hass.localize("ui.common.save")
               : this.hass.localize("ui.common.create")}
           </ha-button>
         </ha-dialog-footer>
-      </ha-wa-dialog>
+      </ha-dialog>
     `;
   }
 
@@ -316,9 +418,9 @@ class DialogAreaDetail
     return deviceReg && deviceReg.area_id === areaId;
   };
 
-  private _nameChanged(ev) {
+  private _nameChanged(ev: InputEvent) {
     this._error = undefined;
-    this._name = ev.target.value;
+    this._name = (ev.target as HaInput).value ?? "";
   }
 
   private _floorChanged(ev) {
@@ -409,9 +511,6 @@ class DialogAreaDetail
     return [
       haStyleDialog,
       css`
-        ha-textfield {
-          display: block;
-        }
         ha-expansion-panel {
           --expansion-panel-content-padding: 0;
         }
@@ -423,13 +522,16 @@ class DialogAreaDetail
         ha-picture-upload,
         ha-expansion-panel {
           display: block;
-          margin-bottom: 16px;
+          margin-bottom: var(--ha-space-4);
         }
         .content {
-          padding: 12px;
+          padding: var(--ha-space-3);
         }
         .description {
-          margin: 0 0 16px 0;
+          margin: 0 0 var(--ha-space-4) 0;
+        }
+        ha-suggest-with-ai-button {
+          margin: var(--ha-space-2) var(--ha-space-4);
         }
       `,
     ];
