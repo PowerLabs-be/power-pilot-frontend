@@ -8,6 +8,7 @@ on:
 env:
   PYTHON_VERSION: "3.14"
   NODE_OPTIONS: --max_old_space_size=6144
+  LOKALISE_TOKEN: ${{ secrets.LOKALISE_TOKEN }}
 
 # Set default workflow permissions
 # All scopes not mentioned here are set to no access
@@ -23,7 +24,7 @@ jobs:
     permissions:
       contents: write # Required to upload release assets
       id-token: write # For "Trusted Publisher" to PyPi
-    if: github.repository_owner == 'home-assistant'
+    if: github.repository_owner == 'PowerLabs-be'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -47,9 +48,8 @@ jobs:
         run: yarn install
 
       - name: Download Translations
+        if: ${{ env.LOKALISE_TOKEN != '' }}
         run: ./script/translations_download
-        env:
-          LOKALISE_TOKEN: ${{ secrets.LOKALISE_TOKEN }}
 
       - name: Build and release package
         run: |
